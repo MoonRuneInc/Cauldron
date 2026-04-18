@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 axum = { version = "0.7", features = ["ws", "macros"] }
+axum-extra = { version = "0.9", features = ["cookie"] }
 tokio = { version = "1", features = ["full"] }
 sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "uuid", "time", "migrate"] }
 redis = { version = "0.24", features = ["tokio-comp", "connection-manager"] }
@@ -19,6 +20,16 @@ time = { version = "0.3", features = ["serde"] }
 dotenvy = "0.15"
 thiserror = "1"
 anyhow = "1"
+jsonwebtoken = "9"
+argon2 = "0.5"
+rand = { version = "0.8", features = ["std"] }
+hmac = "0.12"
+sha2 = "0.10"
+hex = "0.4"
+aes-gcm = "0.10"
+totp-rs = { version = "5", features = ["qr"] }
+lettre = { version = "0.11", default-features = false, features = ["tokio1-rustls-tls", "smtp-transport", "builder"] }
+base64 = "0.21"
 
 [dev-dependencies]
 axum-test = "14"

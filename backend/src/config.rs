@@ -9,6 +9,14 @@ pub enum ConfigError {
 }
 
 #[derive(Clone, Debug)]
+pub struct SmtpConfig {
+    pub host: String,
+    pub username: String,
+    pub password: String,
+    pub from: String,
+}
+
+#[derive(Clone, Debug)]
 pub struct Config {
     pub database_url: String,
     pub redis_url: String,
@@ -18,6 +26,7 @@ pub struct Config {
     pub totp_issuer: String,
     pub totp_encryption_key: String,
     pub domain: String,
+    pub smtp: Option<SmtpConfig>,
 }
 
 impl Config {
@@ -41,6 +50,15 @@ impl Config {
             totp_issuer: std::env::var("TOTP_ISSUER").unwrap_or_else(|_| "RuneChat".to_string()),
             totp_encryption_key: get("TOTP_ENCRYPTION_KEY")?,
             domain: std::env::var("DOMAIN").unwrap_or_else(|_| "chat.moonrune.cc".to_string()),
+            smtp: match std::env::var("SMTP_HOST") {
+                Ok(host) => Some(SmtpConfig {
+                    host,
+                    username: get("SMTP_USERNAME")?,
+                    password: get("SMTP_PASSWORD")?,
+                    from: get("SMTP_FROM")?,
+                }),
+                Err(_) => None,
+            },
         })
     }
 }
