@@ -28,8 +28,35 @@
 - `frontend/index.html`
 - `frontend/src/main.tsx`
 - `frontend/src/App.tsx` — placeholder "RuneChat" page
-- `docker-compose.yml` — app + db + redis + proxy services
+- `docker-compose.yml` — app + db + redis + frontend + proxy services
+- `nginx/dev.conf` — Nginx reverse proxy config routing to app and frontend
+- `backend/Dockerfile` — builds from workspace root context
 - `.env.example` — all required env vars documented
+
+---
+
+## Task 0: Set Git Identity
+
+Every agent sets their own git identity at the start of their session. Commits in this plan are Maya Kade's work and must be attributed to her.
+
+- [ ] **Step 1: Configure git identity for this session**
+
+```bash
+git config user.name "Maya Kade"
+git config user.email "maya@moonrune.cc"
+```
+
+- [ ] **Step 2: Verify**
+
+```bash
+git config user.name && git config user.email
+```
+
+Expected:
+```
+Maya Kade
+maya@moonrune.cc
+```
 
 ---
 
@@ -189,9 +216,15 @@ impl Config {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::Mutex;
+
+    // Env-mutating tests must not run concurrently — Rust test threads share
+    // the process environment. Hold this lock for the duration of each test.
+    static ENV_LOCK: Mutex<()> = Mutex::new(());
 
     #[test]
     fn config_errors_on_missing_required_var() {
+        let _guard = ENV_LOCK.lock().unwrap();
         std::env::remove_var("DATABASE_URL");
         let result = Config::from_env();
         assert!(matches!(result, Err(ConfigError::Missing(ref k, _)) if k == "DATABASE_URL"));
@@ -199,6 +232,7 @@ mod tests {
 
     #[test]
     fn config_uses_defaults_for_optional_vars() {
+        let _guard = ENV_LOCK.lock().unwrap();
         std::env::set_var("DATABASE_URL", "postgres://test");
         std::env::set_var("REDIS_URL", "redis://test");
         std::env::set_var("JWT_SECRET", "secret");
@@ -597,9 +631,9 @@ EOF
 
 ```bash
 cp .env.example .env
-# Fill in JWT_SECRET and TOTP_ENCRYPTION_KEY with generated values:
-echo "JWT_SECRET=$(openssl rand -hex 64)" >> .env
-echo "TOTP_ENCRYPTION_KEY=$(openssl rand -base64 32)" >> .env
+# Replace the empty placeholder values in-place (no duplicate keys)
+sed -i "s|^JWT_SECRET=$|JWT_SECRET=$(openssl rand -hex 64)|" .env
+sed -i "s|^TOTP_ENCRYPTION_KEY=$|TOTP_ENCRYPTION_KEY=$(openssl rand -base64 32)|" .env
 ```
 
 - [ ] **Step 3: Verify .env is gitignored**
@@ -624,7 +658,50 @@ git commit -m "feat: add .env.example with all required vars documented"
 **Files:**
 - Create: `docker-compose.yml`
 
-- [ ] **Step 1: Create docker-compose.yml**
+- [ ] **Step 1: Create nginx/dev.conf**
+
+```bash
+mkdir -p nginx
+```
+
+Create `nginx/dev.conf`:
+
+```nginx
+server {
+    listen 80;
+    server_name _;
+
+    # API and WebSocket traffic → backend
+    location /api/ {
+        proxy_pass http://app:3000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+
+    location /ws {
+        proxy_pass http://app:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+
+    # Health check passthrough (no /api/ prefix)
+    location /health {
+        proxy_pass http://app:3000;
+        proxy_set_header Host $host;
+    }
+
+    # Everything else → frontend
+    location / {
+        proxy_pass http://frontend:80;
+        proxy_set_header Host $host;
+    }
+}
+```
+
+- [ ] **Step 2: Create docker-compose.yml**
 
 ```yaml
 version: "3.9"
@@ -656,14 +733,14 @@ services:
 
   app:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: backend/Dockerfile
     env_file: .env
     environment:
       DATABASE_URL: postgres://runechat:runechat@db:5432/runechat
       REDIS_URL: redis://redis:6379
-    ports:
-      - "3000:3000"
+    expose:
+      - "3000"
     depends_on:
       db:
         condition: service_healthy
@@ -674,30 +751,44 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    ports:
-      - "5173:80"
+    expose:
+      - "80"
     depends_on:
       - app
+
+  proxy:
+    image: nginx:alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx/dev.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - app
+      - frontend
 
 volumes:
   db_data:
   redis_data:
 ```
 
-- [ ] **Step 2: Create backend Dockerfile**
+- [ ] **Step 3: Create backend Dockerfile**
 
-Create `backend/Dockerfile`:
+Create `backend/Dockerfile` — build context is the **workspace root**, not `./backend`:
 
 ```dockerfile
 FROM rust:1.77-alpine AS builder
 RUN apk add --no-cache musl-dev pkgconfig openssl-dev
 WORKDIR /app
+# Copy workspace manifests first for dependency caching
 COPY Cargo.toml Cargo.lock ./
-# Dummy build to cache dependencies
-RUN mkdir src && echo "fn main(){}" > src/main.rs && cargo build --release && rm -rf src
-COPY src ./src
-COPY migrations ./migrations
-RUN touch src/main.rs && cargo build --release
+COPY backend/Cargo.toml ./backend/
+# Dummy src to cache dependency compilation
+RUN mkdir -p backend/src && echo "fn main(){}" > backend/src/main.rs
+RUN cargo build --release -p runechat-backend && rm -rf backend/src
+# Copy real source
+COPY backend/src ./backend/src
+COPY backend/migrations ./backend/migrations
+RUN touch backend/src/main.rs && cargo build --release -p runechat-backend
 
 FROM alpine:3.19
 RUN apk add --no-cache ca-certificates
@@ -706,7 +797,7 @@ EXPOSE 3000
 CMD ["runechat"]
 ```
 
-- [ ] **Step 3: Verify docker-compose config is valid**
+- [ ] **Step 4: Verify docker-compose config is valid**
 
 ```bash
 docker compose config --quiet && echo "OK"
@@ -714,11 +805,11 @@ docker compose config --quiet && echo "OK"
 
 Expected: `OK` with no errors.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
-git add docker-compose.yml backend/Dockerfile
-git commit -m "feat: add docker compose stack and backend dockerfile"
+git add docker-compose.yml backend/Dockerfile nginx/
+git commit -m "feat: add docker compose stack with proxy, correct workspace build context"
 ```
 
 ---
@@ -820,10 +911,10 @@ docker compose ps
 
 Expected: All services show `healthy` or `running`. Wait up to 60s for `db` and `redis` to become healthy.
 
-- [ ] **Step 3: Hit the health endpoint**
+- [ ] **Step 3: Hit the health endpoint via proxy**
 
 ```bash
-curl -s http://localhost:3000/health | python3 -m json.tool
+curl -s http://localhost:8080/health | python3 -m json.tool
 ```
 
 Expected:
@@ -833,10 +924,10 @@ Expected:
 }
 ```
 
-- [ ] **Step 4: Confirm frontend serves**
+- [ ] **Step 4: Confirm frontend serves via proxy**
 
 ```bash
-curl -s -o /dev/null -w "%{http_code}" http://localhost:5173
+curl -s -o /dev/null -w "%{http_code}" http://localhost:8080
 ```
 
 Expected: `200`
