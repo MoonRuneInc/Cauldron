@@ -53,6 +53,24 @@ pub async fn ws_handler(
         Err(_) => return (StatusCode::UNAUTHORIZED, "invalid token").into_response(),
     };
 
+    // Rhea fix: check live DB status — don't trust stale JWT claim
+    let db_status: Option<String> = match sqlx::query_scalar(
+        "SELECT account_status FROM users WHERE id = $1"
+    )
+    .bind(user_id)
+    .fetch_optional(&state.db)
+    .await
+    {
+        Ok(s) => s,
+        Err(_) => return (StatusCode::UNAUTHORIZED, "invalid token").into_response(),
+    };
+
+    match db_status.as_deref() {
+        Some("compromised") => return (StatusCode::UNAUTHORIZED, "account compromised").into_response(),
+        None => return (StatusCode::UNAUTHORIZED, "invalid token").into_response(),
+        _ => {}
+    }
+
     ws.on_upgrade(move |socket| handle_socket(socket, state, user_id))
 }
 

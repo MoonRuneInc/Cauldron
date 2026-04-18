@@ -105,7 +105,8 @@ async fn fetch_channel_members(
         SELECT sm.user_id
         FROM server_members sm
         JOIN channels c ON c.server_id = sm.server_id
-        WHERE c.id = $1
+        JOIN users u ON u.id = sm.user_id
+        WHERE c.id = $1 AND u.account_status != 'compromised'
         "#,
     )
     .bind(channel_id)
