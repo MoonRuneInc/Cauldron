@@ -34,7 +34,9 @@ struct InviteResponse {
     code: String,
     max_uses: Option<i32>,
     uses: i32,
+    #[serde(with = "time::serde::rfc3339::option")]
     expires_at: Option<OffsetDateTime>,
+    #[serde(with = "time::serde::rfc3339")]
     created_at: OffsetDateTime,
 }
 

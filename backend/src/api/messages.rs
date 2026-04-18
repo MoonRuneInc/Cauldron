@@ -25,7 +25,9 @@ struct MessageResponse {
     author_status: String,
     content: String,
     compromised_at_send: bool,
+    #[serde(with = "time::serde::rfc3339")]
     created_at: OffsetDateTime,
+    #[serde(with = "time::serde::rfc3339::option")]
     edited_at: Option<OffsetDateTime>,
 }
 
@@ -120,7 +122,7 @@ async fn send_message(
             "author_status": msg.author_status,
             "content": msg.content,
             "compromised_at_send": msg.compromised_at_send,
-            "created_at": msg.created_at,
+            "created_at": msg.created_at.to_string(),
         }
     });
 

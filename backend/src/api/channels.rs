@@ -66,6 +66,7 @@ struct ChannelResponse {
     server_id: Uuid,
     display_name: String,
     slug: String,
+    #[serde(with = "time::serde::rfc3339")]
     created_at: OffsetDateTime,
 }
 
