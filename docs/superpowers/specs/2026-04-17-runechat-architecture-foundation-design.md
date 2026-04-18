@@ -10,7 +10,7 @@
 
 This document defines the foundational architecture for the RuneChat MVP. It covers the full tech stack, data model, authentication and session security, real-time messaging, channel and invite design, deployment strategy, and red team testing plan.
 
-All decisions here must be reflected in the vault at `/mnt/d/Vaults/OfficeVault/02_Projects/RuneChat/03_Decisions.md` and treated as authoritative until explicitly revised.
+All key decisions are also logged in `03_Decisions.md`. This spec is the canonical planning document for Phase 1.
 
 ---
 

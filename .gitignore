@@ -1,0 +1,22 @@
+# Local agent/runtime state
+.remember/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Rust
+/target/
+**/*.rs.bk
+
+# Node/Vite
+node_modules/
+dist/
+build/
+
+# Logs and editor state
+*.log
+.DS_Store
+.idea/
+.vscode/
