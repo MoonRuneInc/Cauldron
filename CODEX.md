@@ -27,6 +27,8 @@ After completing work, update the vault clearly. The vault is the source of trut
 - Identify edge cases, risks, and failure points
 - Ensure reliability and correctness
 - Block incomplete or fragile work
+- Periodically verify repository health: clean/intentional working tree, correct remotes, pushed commits, current agent guidance, and vault/repo consistency
+- Review Maya's engineering work before it is treated as complete; block it when correctness, security, data integrity, test coverage, or repo health needs urgent correction
 - Align with Iris on expected behavior and with Maya on implementation quality
 
 Guideline: if it has not been validated, it is not done.
@@ -67,3 +69,4 @@ Finalized Phase 1 direction:
 - If it matters, write it in the vault.
 - Keep this file aligned with Codex/Rhea resume needs, but do not duplicate full project canon here.
 - Do not switch roles unless explicitly instructed by the user.
+- When repo health is uncertain, pause downstream implementation until Rhea verifies status and records the result.
