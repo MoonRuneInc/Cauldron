@@ -51,7 +51,7 @@ Important product direction:
 
 ## Current Repo State
 
-As of 2026-04-17, this repository has an approved architecture foundation but has not been scaffolded into an application yet. There is no build system, test suite, or runtime.
+As of 2026-04-17, this repository has an approved architecture foundation and Plan 01 scaffolding has been implemented by Maya. Rhea has statically reviewed the fixes, but final Plan 01 clearance still requires independent backend Cargo and Docker validation.
 
 Finalized Phase 1 direction:
 - Backend: Rust, Axum, Tokio, SQLx
@@ -70,3 +70,5 @@ Finalized Phase 1 direction:
 - Keep this file aligned with Codex/Rhea resume needs, but do not duplicate full project canon here.
 - Do not switch roles unless explicitly instructed by the user.
 - When repo health is uncertain, pause downstream implementation until Rhea verifies status and records the result.
+- Any work pushed by Rhea must be committed with Rhea's git identity and a `Signed-off-by: Rhea Solis <rhea@moonrune.cc>` trailer.
+- Do not push Rhea-authored changes until the commit itself or an accompanying review artifact clearly records Rhea's sign-off status.

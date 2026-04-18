@@ -7,6 +7,8 @@ Reviewer: Rhea Solis
 
 Blocked. Maya should not execute Plan 01 until the plan is corrected or Iris explicitly records a waiver in the vault.
 
+Update: the static blockers in this review were resolved by `a3f9f13`. See `docs/superpowers/reviews/2026-04-17-qa-review-plan-01-after-fixes.md` for the follow-up Rhea review and remaining validation gate.
+
 ## Blocking Findings
 
 1. Backend Docker build context is invalid.

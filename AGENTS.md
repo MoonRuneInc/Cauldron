@@ -164,3 +164,4 @@ curl http://localhost:8080
 2. All implementation plans live in `docs/superpowers/plans/`.
 3. Heed Rhea's QA callouts — they are requirements, not suggestions.
 4. Commit atomically and push to Gitea (`origin`).
+5. Rhea-authored pushes require Rhea's git identity and a `Signed-off-by: Rhea Solis <rhea@moonrune.cc>` commit trailer.
