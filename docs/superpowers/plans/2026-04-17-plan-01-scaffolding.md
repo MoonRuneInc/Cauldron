@@ -704,8 +704,6 @@ server {
 - [ ] **Step 2: Create docker-compose.yml**
 
 ```yaml
-version: "3.9"
-
 services:
   db:
     image: postgres:16-alpine
@@ -722,7 +720,7 @@ services:
       retries: 10
 
   redis:
-    image: redis:7-alpine
+    image: redis:8-alpine
     volumes:
       - redis_data:/data
     healthcheck:
@@ -757,7 +755,7 @@ services:
       - app
 
   proxy:
-    image: nginx:alpine
+    image: nginx:1.30-alpine-slim
     ports:
       - "8080:80"
     volumes:
@@ -776,7 +774,7 @@ volumes:
 Create `backend/Dockerfile` — build context is the **workspace root**, not `./backend`:
 
 ```dockerfile
-FROM rust:1.77-alpine AS builder
+FROM rust:1-alpine AS builder
 RUN apk add --no-cache musl-dev pkgconfig openssl-dev
 WORKDIR /app
 # Copy workspace manifests first for dependency caching
@@ -790,7 +788,7 @@ COPY backend/src ./backend/src
 COPY backend/migrations ./backend/migrations
 RUN touch backend/src/main.rs && cargo build --release -p runechat-backend
 
-FROM alpine:3.19
+FROM alpine:3.23
 RUN apk add --no-cache ca-certificates
 COPY --from=builder /app/target/release/runechat-backend /usr/local/bin/runechat
 EXPOSE 3000
@@ -880,7 +878,7 @@ RUN npm ci
 COPY . .
 RUN npm run build
 
-FROM nginx:alpine
+FROM nginx:1.30-alpine-slim
 COPY --from=builder /app/dist /usr/share/nginx/html
 EXPOSE 80
 ```

@@ -1,4 +1,4 @@
-FROM rust:1.77-alpine AS builder
+FROM rust:1-alpine AS builder
 RUN apk add --no-cache musl-dev pkgconfig openssl-dev
 WORKDIR /app
 
@@ -14,7 +14,7 @@ COPY backend/src ./backend/src
 COPY backend/migrations ./backend/migrations
 RUN touch backend/src/main.rs && cargo build --release -p runechat-backend
 
-FROM alpine:3.19
+FROM alpine:3.23
 RUN apk add --no-cache ca-certificates
 COPY --from=builder /app/target/release/runechat-backend /usr/local/bin/runechat
 EXPOSE 3000

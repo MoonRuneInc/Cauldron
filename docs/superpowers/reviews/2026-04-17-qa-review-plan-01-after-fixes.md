@@ -1,11 +1,14 @@
 # QA Review: Plan 01 After Fixes
 
 Date: 2026-04-17  
+Updated: 2026-04-18
 Reviewer: Rhea Solis
 
 ## Verdict
 
-Static QA passed for the previous Plan 01 blockers. Final Rhea sign-off is still pending backend and Docker validation in an environment with Rust/Cargo and Docker available.
+Plan 01 is Rhea-cleared for continued development after Docker validation and Scout-driven image hardening.
+
+Production deployment remains blocked until the Postgres image CVE exposure is either remediated or accepted through a documented production risk decision.
 
 ## Resolved Findings
 
@@ -34,18 +37,36 @@ Static QA passed for the previous Plan 01 blockers. Final Rhea sign-off is still
 - `npm run lint` from `frontend/`: passed.
 - `npm run build` from `frontend/`: passed.
 - Static review of `docker-compose.yml`, `backend/Dockerfile`, `nginx/dev.conf`, `.dockerignore`, `Cargo.lock`, and env-test mutex: passed.
-- Repo is clean and `master` matches `origin/master` at `a3f9f13`.
+- Pre-hardening baseline matched `origin/master` at `a3f9f13`.
+- Initial `docker compose config --quiet`: passed after Docker became available.
+- Initial `docker compose build`: exposed a real blocker: `rust:1.77-alpine` could not parse Cargo lockfile version 4.
+- Rhea changed the backend builder image to `rust:1-alpine`, added `frontend/.dockerignore`, and removed the obsolete Compose `version` key.
+- Rhea updated runtime images after Docker Scout review:
+  - backend runtime: `alpine:3.23`
+  - frontend runtime: `nginx:1.30-alpine-slim`
+  - proxy: `nginx:1.30-alpine-slim`
+  - Redis: `redis:8-alpine`
+- `docker compose up --build -d`: passed.
+- `docker compose ps`: all services up; Postgres and Redis healthchecks healthy.
+- `curl http://localhost:8080/health`: returned `{"status":"ok"}`.
+- `curl http://localhost:8080`: returned HTTP 200.
+- `docker build --target builder -t runechat-backend-builder -f backend/Dockerfile .`: passed.
+- `/usr/local/cargo/bin/cargo test -p runechat-backend` inside the exported builder image: passed, 7 tests.
 
-## Verification Not Performed
+## Docker Scout Result
 
-- `cargo test -p runechat-backend`: not run because `cargo` is unavailable in this shell.
-- `cargo build -p runechat-backend`: not run because `cargo` is unavailable in this shell.
-- `docker compose config --quiet`: not run because Docker Desktop WSL integration is unavailable in this shell.
-- `docker compose up --build -d` and health smoke test: not run for the same Docker reason.
+- `runechat-app:latest`: 0 critical, 0 high, 1 medium, 0 low. Remaining finding is BusyBox in Alpine.
+- `runechat-frontend:latest`: 0 critical, 0 high, 1 medium, 0 low. Remaining finding is BusyBox in Alpine.
+- `nginx:1.30-alpine-slim`: 0 critical, 0 high, 1 medium, 0 low. Remaining finding is BusyBox in Alpine.
+- `redis:8-alpine`: 0 critical, 0 high, 1 medium, 0 low. Remaining finding is BusyBox in Alpine.
+- `postgres:16-alpine`: 1 critical, 10 high, 15 medium, 1 low after Scout exceptions; findings are from official-image dependencies including Go stdlib metadata, BusyBox, and OpenLDAP.
+
+## Residual Risk
+
+The Compose stack is acceptable for local development and Plan 2 execution. It is not acceptable as a production deployment baseline while `postgres:16-alpine` retains critical/high Docker Scout findings.
 
 ## Rhea Gate
 
-Do not treat Plan 01 as fully Rhea-cleared until one of the following is true:
+Plan 01 development gate is cleared.
 
-- Rhea reruns the missing Cargo and Docker checks in a capable environment and records the result, or
-- Maya provides verifiable command output/artifacts and Rhea accepts them in the vault.
+Production gate remains closed on the database image until Postgres CVE mitigation is resolved or explicitly risk-accepted in the vault.
