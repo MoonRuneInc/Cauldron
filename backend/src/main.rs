@@ -4,7 +4,8 @@ use redis::aio::ConnectionManager;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 use std::sync::Arc;
 use dashmap::DashMap;
-use tower_http::cors::{Any, CorsLayer};
+use tower_http::cors::CorsLayer;
+use axum::http::header;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -54,8 +55,18 @@ async fn main() -> anyhow::Result<()> {
             "http://localhost:3000".parse().unwrap(),   // Same-origin dev
             "https://chat.moonrune.cc".parse().unwrap(), // Production web
         ])
-        .allow_methods(Any)
-        .allow_headers(Any)
+        .allow_methods([
+            axum::http::Method::GET,
+            axum::http::Method::POST,
+            axum::http::Method::PUT,
+            axum::http::Method::PATCH,
+            axum::http::Method::DELETE,
+        ])
+        .allow_headers([
+            header::AUTHORIZATION,
+            header::CONTENT_TYPE,
+            header::ACCEPT,
+        ])
         .allow_credentials(true);
 
     let app = api::router()
