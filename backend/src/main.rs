@@ -49,12 +49,19 @@ async fn main() -> anyhow::Result<()> {
     });
 
     let cors = CorsLayer::new()
-        .allow_origin([
-            "http://localhost:5173".parse().unwrap(),   // Vite dev
-            "http://localhost:1420".parse().unwrap(),   // Tauri dev
-            "http://localhost:3000".parse().unwrap(),   // Same-origin dev
-            "https://chat.moonrune.cc".parse().unwrap(), // Production web
-        ])
+        .allow_origin(tower_http::cors::AllowOrigin::predicate(
+            |origin: &axum::http::HeaderValue, _request_head: &axum::http::request::Parts| {
+                let s = origin.as_bytes();
+                // Production web
+                s == b"https://chat.moonrune.cc"
+                // Any localhost origin (dev servers, Tauri custom protocols)
+                || s.starts_with(b"http://localhost")
+                || s.starts_with(b"https://localhost")
+                // Tauri v2 custom protocol origins
+                || s.starts_with(b"https://tauri.localhost")
+                || s.starts_with(b"http://tauri.localhost")
+            },
+        ))
         .allow_methods([
             axum::http::Method::GET,
             axum::http::Method::POST,
