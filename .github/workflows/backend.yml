@@ -78,6 +78,8 @@ jobs:
           context: ./db
           push: false
           tags: runechat-db:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Scan DB image
         uses: aquasecurity/trivy-action@master
@@ -93,3 +95,5 @@ jobs:
           file: ./backend/Dockerfile
           push: false
           tags: runechat-backend:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
