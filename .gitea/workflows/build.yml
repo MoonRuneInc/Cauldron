@@ -73,6 +73,8 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
 
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
 
       - name: Install Linux dependencies
         run: |
@@ -96,15 +98,19 @@ jobs:
       - run: npm ci
         working-directory: ./frontend
 
-      - name: Build Tauri (Android)
-        uses: tauri-apps/tauri-action@v0
+      - name: Init Android project
+        working-directory: ./frontend
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ANDROID_HOME: ${{ env.ANDROID_SDK_ROOT }}
           NDK_HOME: ${{ env.ANDROID_NDK_HOME }}
-        with:
-          projectPath: ./frontend
-          args: --apk
+        run: npx tauri android init --ci
+
+      - name: Build Android APK
+        working-directory: ./frontend
+        env:
+          ANDROID_HOME: ${{ env.ANDROID_SDK_ROOT }}
+          NDK_HOME: ${{ env.ANDROID_NDK_HOME }}
+        run: npx tauri android build --target aarch64
 
       - uses: actions/upload-artifact@v3
         with:
