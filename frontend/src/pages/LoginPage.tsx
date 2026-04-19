@@ -12,6 +12,8 @@ export default function LoginPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
 
+  const redirect = searchParams.get('redirect')
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
@@ -19,7 +21,6 @@ export default function LoginPage() {
     try {
       const { access_token, user } = await authApi.login(identifier, password)
       setAuth(user, access_token)
-      const redirect = searchParams.get('redirect')
       navigate(redirect ?? '/')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed')
@@ -72,7 +73,10 @@ export default function LoginPage() {
 
         <p className="text-center text-sm text-gray-400 mt-6">
           No account?{' '}
-          <Link to="/register" className="text-accent-400 hover:underline">
+          <Link
+            to={redirect ? `/register?redirect=${encodeURIComponent(redirect)}` : '/register'}
+            className="text-accent-400 hover:underline"
+          >
             Create one
           </Link>
         </p>

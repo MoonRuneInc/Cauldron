@@ -122,7 +122,7 @@ async fn send_message(
             "author_status": msg.author_status,
             "content": msg.content,
             "compromised_at_send": msg.compromised_at_send,
-            "created_at": msg.created_at.to_string(),
+            "created_at": msg.created_at.format(&time::format_description::well_known::Rfc3339).unwrap(),
         }
     });
 
