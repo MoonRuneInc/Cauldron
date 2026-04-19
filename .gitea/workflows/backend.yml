@@ -88,6 +88,7 @@ jobs:
         with:
           context: ./db
           push: false
+          load: true
           tags: runechat-db:latest
 
       - name: Scan DB image
