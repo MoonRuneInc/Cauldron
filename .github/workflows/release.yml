@@ -5,6 +5,10 @@ on:
     tags:
       - 'v*'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   CARGO_INCREMENTAL: 0
   RUST_BACKTRACE: short
@@ -32,6 +36,11 @@ jobs:
           rustup default stable
           rustc --version
           cargo --version
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: . -> target
+          cache-on-failure: true
 
       - name: Install NSIS
         shell: pwsh
@@ -107,6 +116,11 @@ jobs:
           rustc --version
           cargo --version
 
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: . -> target
+          cache-on-failure: true
+
       - name: Install Linux dependencies
         run: |
           sudo apt-get update
@@ -120,6 +134,9 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
+
+      - name: Set up Gradle cache
+        uses: gradle/actions/setup-gradle@v4
 
       - name: Install Android NDK
         run: |
