@@ -1,0 +1,5 @@
+pytest>=8.0
+requests>=2.31
+websockets>=12.0
+websocket-client>=1.7
+pytest-html>=4.1

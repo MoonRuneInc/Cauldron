@@ -1,0 +1,1 @@
+"""Red team shared utilities."""
