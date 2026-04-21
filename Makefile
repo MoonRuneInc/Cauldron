@@ -33,5 +33,9 @@ prod-config:
 	@test -f .env.prod || (echo "ERROR: .env.prod not found. Copy from .env.prod.example and fill in required values." && exit 1)
 	docker compose -f docker-compose.prod.yml config
 
+prod-nginx-test:
+	@test -f .env.prod || (echo "ERROR: .env.prod not found. Copy from .env.prod.example and fill in required values." && exit 1)
+	docker compose -f docker-compose.prod.yml run --rm --no-deps proxy nginx -t
+
 prod-clean:
 	docker compose -f docker-compose.prod.yml down -v

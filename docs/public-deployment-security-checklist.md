@@ -15,15 +15,21 @@ Public launch stops if any item is unchecked. These are must-pass.
 
 ### 1.1 Code Verification
 
-- [ ] **Backend unit tests pass**
+- [ ] **Backend unit tests pass** (run against a CI or local test DB — **never production**)
   ```bash
-  DATABASE_URL=postgres://<prod-or-ci-db> cargo test -p runechat-backend
+  DATABASE_URL=postgres://<ci-or-local-test-db> cargo test -p runechat-backend
   ```
   Expected: 22+ unit tests passed, 0 failed. Auth regression test passed.
 
 - [ ] **Red Team suite passes**
+  Pre-deploy internal validation (local Compose):
   ```bash
-  cd redteam && source .venv/bin/activate && pytest -v
+  cd redteam && source .venv/bin/activate && pytest -v --tb=short
+  ```
+  Production launch verification (live target):
+  ```bash
+  cd redteam && source .venv/bin/activate && \
+    RUNECHAT_TARGET=https://chat.moonrune.cc pytest -v --tb=short
   ```
   Expected: 49 passed, 8 skipped, 0 failed.
   The 4 rate-limit tests (`test_login_brute_force_is_rate_limited`,
@@ -144,7 +150,7 @@ proxy publishes `127.0.0.1:8080:80`.
 ### 3.4 Nginx Config Syntax
 
 ```bash
-docker compose -f docker-compose.prod.yml run --rm --no-deps proxy nginx -t
+make prod-nginx-test
 ```
 **Expected:** `syntax is ok`, `test is successful`.
 
