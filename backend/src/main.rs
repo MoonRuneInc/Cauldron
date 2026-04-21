@@ -1,7 +1,8 @@
-use runechat_backend::{api, config::Config, state::AppState};
+use runechat_backend::{api, config::Config, rate_limit::RateLimiters, state::AppState};
 use sqlx::postgres::PgPoolOptions;
 use redis::aio::ConnectionManager;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+use std::net::SocketAddr;
 use std::sync::Arc;
 use dashmap::DashMap;
 use tower_http::cors::CorsLayer;
@@ -35,6 +36,7 @@ async fn main() -> anyhow::Result<()> {
         redis,
         config: config.clone(),
         ws_senders: Arc::new(DashMap::new()),
+        rate_limiters: RateLimiters::new(),
     };
 
     // Start Redis broker as a background task
@@ -83,7 +85,11 @@ async fn main() -> anyhow::Result<()> {
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await?;
     tracing::info!("listening on {}", listener.local_addr()?);
-    axum::serve(listener, app).await?;
+    axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<SocketAddr>(),
+    )
+    .await?;
 
     Ok(())
 }

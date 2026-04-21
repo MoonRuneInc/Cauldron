@@ -18,6 +18,8 @@ pub enum AppError {
     BadRequest(String),
     #[error("conflict: {0}")]
     Conflict(String),
+    #[error("too many requests")]
+    TooManyRequests,
     #[error("internal error")]
     Internal(#[from] anyhow::Error),
 }
@@ -30,6 +32,7 @@ impl IntoResponse for AppError {
             AppError::Forbidden => (StatusCode::FORBIDDEN, self.to_string()),
             AppError::BadRequest(msg) => (StatusCode::BAD_REQUEST, msg.clone()),
             AppError::Conflict(msg) => (StatusCode::CONFLICT, msg.clone()),
+            AppError::TooManyRequests => (StatusCode::TOO_MANY_REQUESTS, self.to_string()),
             AppError::Database(_) | AppError::Internal(_) => {
                 (StatusCode::INTERNAL_SERVER_ERROR, "internal server error".to_string())
             }
@@ -61,6 +64,12 @@ mod tests {
     fn bad_request_maps_to_400() {
         let resp = AppError::BadRequest("missing field".to_string()).into_response();
         assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[test]
+    fn too_many_requests_maps_to_429() {
+        let resp = AppError::TooManyRequests.into_response();
+        assert_eq!(resp.status(), StatusCode::TOO_MANY_REQUESTS);
     }
 
     #[test]

@@ -1,9 +1,10 @@
 use axum::{
-    extract::State,
-    http::{header, StatusCode},
+    extract::{ConnectInfo, State},
+    http::{header, HeaderMap, StatusCode},
     routing::post,
     Json, Router,
 };
+use std::net::SocketAddr;
 use axum_extra::extract::cookie::{Cookie, CookieJar, SameSite};
 use serde::{Deserialize, Serialize};
 use time::{Duration, OffsetDateTime};
@@ -173,9 +174,17 @@ struct LoginBody {
 
 async fn login(
     State(state): State<AppState>,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    headers: HeaderMap,
     jar: CookieJar,
     Json(body): Json<LoginBody>,
 ) -> crate::error::Result<(CookieJar, Json<AuthResponse>)> {
+    let ip = crate::rate_limit::extract_client_ip(&headers, Some(addr));
+    state.rate_limiters.login_ip.check_key(&ip)
+        .map_err(|_| AppError::TooManyRequests)?;
+    state.rate_limiters.login_identifier.check_key(&body.identifier.to_lowercase())
+        .map_err(|_| AppError::TooManyRequests)?;
+
     #[derive(sqlx::FromRow)]
     struct UserRow {
         id: Uuid,
@@ -379,6 +388,8 @@ async fn totp_verify_enrollment(
     auth: AuthUser,
     Json(body): Json<TotpCodeBody>,
 ) -> crate::error::Result<StatusCode> {
+    state.rate_limiters.totp_user.check_key(&auth.user_id)
+        .map_err(|_| AppError::TooManyRequests)?;
     #[derive(sqlx::FromRow)]
     struct SecretRow {
         id: Uuid,

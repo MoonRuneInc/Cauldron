@@ -1,9 +1,10 @@
 use axum::{
-    extract::{Path, State},
-    http::StatusCode,
+    extract::{ConnectInfo, Path, State},
+    http::{HeaderMap, StatusCode},
     routing::{get, post},
     Json, Router,
 };
+use std::net::SocketAddr;
 use rand::{distributions::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
@@ -125,7 +126,12 @@ async fn create_invite(
 async fn preview_invite(
     State(state): State<AppState>,
     Path(code): Path<String>,
+    headers: HeaderMap,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
 ) -> crate::error::Result<Json<serde_json::Value>> {
+    let ip = crate::rate_limit::extract_client_ip(&headers, Some(addr));
+    state.rate_limiters.invite_preview_ip.check_key(&ip)
+        .map_err(|_| AppError::TooManyRequests)?;
     // Public endpoint — no auth required
     #[derive(sqlx::FromRow)]
     struct Row {
@@ -176,7 +182,12 @@ async fn join_via_invite(
     State(state): State<AppState>,
     auth: AuthUser,
     Path(code): Path<String>,
+    headers: HeaderMap,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
 ) -> crate::error::Result<Json<serde_json::Value>> {
+    let ip = crate::rate_limit::extract_client_ip(&headers, Some(addr));
+    state.rate_limiters.invite_join_ip.check_key(&ip)
+        .map_err(|_| AppError::TooManyRequests)?;
     // Atomic check-and-increment using SELECT FOR UPDATE inside a transaction
     let mut tx = state.db.begin().await?;
 

@@ -5,6 +5,7 @@ use redis::aio::ConnectionManager;
 use tokio::sync::mpsc;
 use uuid::Uuid;
 use crate::config::Config;
+use crate::rate_limit::RateLimiters;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -12,4 +13,5 @@ pub struct AppState {
     pub redis: ConnectionManager,
     pub config: Config,
     pub ws_senders: Arc<DashMap<Uuid, mpsc::UnboundedSender<String>>>,
+    pub rate_limiters: RateLimiters,
 }
