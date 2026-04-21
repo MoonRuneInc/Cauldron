@@ -135,8 +135,9 @@ cd redteam && source .venv/bin/activate && pytest -v --tb=short
 ### 3.2 Backend Tests
 
 ```bash
-DATABASE_URL="$DATABASE_URL" cargo test -p runechat-backend
+DATABASE_URL=postgres://<ci-or-local-test-db> cargo test -p runechat-backend
 ```
+Do not use `.env.prod` or the production managed Postgres URL for this command.
 **Expected:** 22+ passed, 0 failed.
 
 ### 3.3 Compose Config Validation
