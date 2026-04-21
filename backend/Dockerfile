@@ -30,7 +30,7 @@ RUN mkdir -p frontend/src-tauri/src \
 RUN cargo build --release -p runechat-backend
 
 FROM alpine:3.23
-RUN apk add --no-cache ca-certificates
+RUN apk add --no-cache ca-certificates wget
 COPY --from=builder /app/target/release/runechat-backend /usr/local/bin/runechat
 EXPOSE 3000
 CMD ["runechat"]

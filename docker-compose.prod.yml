@@ -1,0 +1,87 @@
+# RuneChat — Production Docker Compose
+#
+# Deploys the application stack without a local database.
+# PostgreSQL is assumed to be managed externally (RDS, Cloud SQL, etc.).
+# Redis runs internally with no exposed ports.
+#
+# TLS termination is expected at an upstream load balancer.
+# The proxy binds to localhost only (127.0.0.1:8080) so the LB can forward
+# to it without direct internet exposure. Adjust if the LB runs elsewhere.
+#
+# Required:
+#   cp .env.prod.example .env
+#   # fill in all values
+#   docker compose -f docker-compose.prod.yml up --build -d
+
+services:
+  redis:
+    image: redis:8-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    # No ports exposed — internal only
+
+  app:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      # These are overridable via .env; defaults keep services internal.
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      RUST_LOG: ${RUST_LOG:-info}
+    expose:
+      - "3000"
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    # If you need to pin resource limits:
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '2.0'
+    #       memory: 512M
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    expose:
+      - "80"
+    depends_on:
+      - app
+
+  proxy:
+    image: nginx:1.30-alpine-slim
+    restart: unless-stopped
+    ports:
+      # Bind to localhost only. The upstream load balancer (or reverse proxy)
+      # forwards to 127.0.0.1:8080. Change to "80:80" only if the host is
+      # directly exposed and you accept the risk.
+      - "127.0.0.1:8080:80"
+    volumes:
+      - ./nginx/prod.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - app
+      - frontend
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  redis_data:
