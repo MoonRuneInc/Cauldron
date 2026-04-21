@@ -68,7 +68,7 @@ Better decisions come from better information.
 **RuneChat** is a FOSS, security-first chat platform intended to become a real alternative to Discord. MVP is in progress.
 
 - **Root directory:** `/home/mystiatech/projects/cc/moonrune/RuneChat`
-- **Current state:** Plan 1 scaffold exists and has Rhea fixes applied locally. Final Rhea clearance is pending backend/Docker validation in an environment with Rust/Cargo and Docker available.
+- **Current state:** Rate limiting implemented and Blue Team cleared. Red Team test suite passes (49/49). Backend compiles and unit tests pass. Ready for production deployment track.
 - **Deployment target:** `chat.moonrune.cc`
 
 ## Technology Stack
@@ -125,17 +125,27 @@ RuneChat/
 
 **Backend:**
 ```bash
-cargo test -p runechat-backend
 cargo build -p runechat-backend
+# Unit tests (no DB required)
+cargo test -p runechat-backend --lib
+
+# Full suite including integration tests — requires a running Postgres.
+# From the host shell, override DATABASE_URL because .env points to the
+# Compose service name `db` which only resolves inside Docker:
+DATABASE_URL=postgres://runechat:runechat@localhost:5432/runechat \
+  cargo test -p runechat-backend
+
+# Inside a Docker container (or when Compose networking is available):
+cargo test -p runechat-backend
 ```
 
 **Frontend:**
 ```bash
-cd frontend && npm run build   # builds
+cd frontend && npm run build   # production build
 cd frontend && npm run dev     # dev server
 ```
 
-**Docker (requires Docker Desktop):**
+**Docker:**
 ```bash
 docker compose up --build -d
 curl http://localhost:8080/health
@@ -151,11 +161,13 @@ curl http://localhost:8080
 
 - Backend: Unit tests alongside modules (config, error, API handlers). Integration tests deferred to Plan 2+.
 - Frontend: No tests yet — add when feature complexity warrants.
+- Security: Red Team test suite in `redteam/` — run with `pytest -v` against a running backend.
 
 ## Security Considerations
 
 - `.env` is gitignored. `.env.example` documents all required variables.
 - JWT secret and TOTP encryption key must be generated per-deployment.
+- Rate limiting is live on login, TOTP verify, and invite endpoints. See `backend/src/rate_limit.rs`.
 - See `07_QA_Repo_Readiness.md` in vault for Rhea's callouts (case-insensitive usernames, refresh token replay, invite race conditions, etc.).
 
 ## Notes for Future Agents
