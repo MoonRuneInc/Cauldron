@@ -11,7 +11,10 @@
 # Required:
 #   cp .env.prod.example .env.prod
 #   # fill in all values
-#   docker compose -f docker-compose.prod.yml --env-file .env.prod up --build -d
+#   make prod-up
+#
+# Do NOT invoke docker compose directly for production — the Makefile sets
+# COMPOSE_ENV_FILES so the default .env (dev settings) is never loaded.
 
 services:
   redis:
