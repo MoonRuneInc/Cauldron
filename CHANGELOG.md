@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.1.3 - 2026-04-22
+
+Android signature verification recovery.
+
+### Fixed
+
+- Resolve `apksigner` from the installed Android build-tools directory instead of relying on runner `PATH`.
+
 ## v0.1.2 - 2026-04-22
 
 Android release workflow recovery.

@@ -236,6 +236,15 @@ jobs:
       - name: Verify Android APK signature
         run: |
           set -euo pipefail
+          apksigner="$ANDROID_HOME/build-tools/35.0.0/apksigner"
+          if [ ! -x "$apksigner" ]; then
+            apksigner="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          fi
+          if [ -z "$apksigner" ] || [ ! -x "$apksigner" ]; then
+            echo "::error::apksigner not found in Android build-tools."
+            exit 1
+          fi
+
           mapfile -t apks < <(find frontend/src-tauri/gen/android/app/build/outputs/apk -type f -name "*.apk" ! -name "*unsigned*" | sort)
           if [ "${#apks[@]}" -eq 0 ]; then
             echo "::error::No signed Android APK found."
@@ -243,7 +252,7 @@ jobs:
           fi
 
           for apk in "${apks[@]}"; do
-            apksigner verify --verbose "$apk"
+            "$apksigner" verify --verbose "$apk"
           done
 
       - uses: actions/upload-artifact@v4
