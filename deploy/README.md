@@ -30,20 +30,6 @@ Expected response:
 {"status":"ok"}
 ```
 
-If you want the portable image bundle first, run this from a full repo clone
-on any Docker-capable build machine:
-
-```bash
-./deploy/build-truenas-images.sh
-```
-
-That creates:
-
-```text
-deploy/runechat-app.tar
-deploy/runechat-frontend.tar
-```
-
 ## What You Still Need
 
 - TrueNAS SCALE with Docker Compose available.
@@ -61,7 +47,6 @@ Run from `deploy/`:
 |---|---|
 | `./truenas.sh init` | Create `.env.prod`, generate `JWT_SECRET`, generate `TOTP_ENCRYPTION_KEY` |
 | `./truenas.sh doctor` | Validate Docker, env, compose config, images, and health |
-| `./truenas.sh images` | Build and export `runechat-app.tar` and `runechat-frontend.tar`; requires full repo |
 | `./truenas.sh load` | Load `runechat-app.tar` and `runechat-frontend.tar` if present |
 | `./truenas.sh up` | Start the self-contained pre-built image deployment |
 | `./truenas.sh up-build` | Build from source and start; requires full repo clone |
@@ -74,7 +59,6 @@ Run from `deploy/`:
 
 ```bash
 make init
-make images
 make doctor
 make up
 make logs
@@ -107,34 +91,14 @@ Leave `REDIS_URL` alone unless you are running Redis outside this compose stack.
 
 ### Self-Contained Image Bundle
 
-Use this when you want to build once, copy only the deploy bundle to TrueNAS,
-and avoid building on the TrueNAS host.
-
-On your build machine:
+Use this when you have image tarballs:
 
 ```bash
-git clone https://github.com/MoonRuneInc/RuneChat.git
-cd RuneChat
-./deploy/build-truenas-images.sh
-```
-
-Copy these files to the TrueNAS host:
-
-```text
-deploy/docker-compose.truenas.yml
-deploy/prod.conf
-deploy/truenas.sh
-deploy/Makefile
-deploy/runechat-app.tar
-deploy/runechat-frontend.tar
-```
-
-On TrueNAS:
-
-```bash
-cd /path/to/runechat-deploy
+cd RuneChat/deploy
 ./truenas.sh init
 # edit .env.prod
+cp /path/to/runechat-app.tar .
+cp /path/to/runechat-frontend.tar .
 ./truenas.sh up
 ```
 
@@ -228,7 +192,6 @@ curl https://chat.moonrune.cc/health
 | File | Purpose |
 |---|---|
 | `truenas.sh` | Operator helper script |
-| `build-truenas-images.sh` | Builds and exports the backend/frontend image tarballs |
 | `Makefile` | Short wrappers around `truenas.sh` |
 | `docker-compose.truenas.yml` | Self-contained deployment using pre-built images |
 | `docker-compose.truenas-build.yml` | Full-repo source build deployment |
