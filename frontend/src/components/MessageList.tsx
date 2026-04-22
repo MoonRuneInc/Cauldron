@@ -27,7 +27,7 @@ function MessageItem({ message }: { message: Message }) {
           {message.author_status === 'compromised' && <CompromisedBadge />}
           <span className="text-xs text-ivory/50">{ts}</span>
         </div>
-        <p className={`text-sm leading-relaxed text-ivory/90 break-words ${
+        <p className={`text-sm leading-relaxed text-ivory/90 break-words whitespace-pre-wrap ${
           message.compromised_at_send ? 'opacity-60 italic' : ''
         }`}>
           {message.compromised_at_send && (
