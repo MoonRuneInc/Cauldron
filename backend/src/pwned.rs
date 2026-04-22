@@ -7,12 +7,23 @@ pub enum PwnedCheckResult {
     ServiceUnavailable,
 }
 
+/// Check a password against the Have I Been Pwned Pwned Passwords API.
+/// Uses k-anonymity: only the first 5 hex chars of the SHA-1 hash are sent.
 pub async fn check_password(client: &reqwest::Client, password: &str) -> PwnedCheckResult {
+    check_password_with_base_url(client, password, "https://api.pwnedpasswords.com").await
+}
+
+/// Internal variant that accepts a base URL for testing.
+pub(crate) async fn check_password_with_base_url(
+    client: &reqwest::Client,
+    password: &str,
+    base_url: &str,
+) -> PwnedCheckResult {
     let hash = format!("{:X}", Sha1::digest(password.as_bytes()));
     let prefix = &hash[..5];
     let suffix = &hash[5..];
 
-    let url = format!("https://api.pwnedpasswords.com/range/{}", prefix);
+    let url = format!("{}/range/{}", base_url, prefix);
 
     let response = match client
         .get(&url)
@@ -30,6 +41,11 @@ pub async fn check_password(client: &reqwest::Client, password: &str) -> PwnedCh
         Err(_) => return PwnedCheckResult::ServiceUnavailable,
     };
 
+    parse_pwned_response(&body, suffix)
+}
+
+/// Parse a HIBP range response body and check whether the given suffix appears.
+pub(crate) fn parse_pwned_response(body: &str, suffix: &str) -> PwnedCheckResult {
     for line in body.lines() {
         if let Some((line_suffix, count_str)) = line.split_once(':') {
             if line_suffix.eq_ignore_ascii_case(suffix) {
@@ -45,25 +61,104 @@ pub async fn check_password(client: &reqwest::Client, password: &str) -> PwnedCh
 #[cfg(test)]
 mod tests {
     use super::*;
+    use wiremock::{matchers, Mock, MockServer, ResponseTemplate};
+
+    #[tokio::test]
+    async fn check_password_finds_pwned_password_via_mock() {
+        let mock_server = MockServer::start().await;
+        let hash = format!("{:X}", Sha1::digest(b"password"));
+        let prefix = &hash[..5];
+        let suffix = &hash[5..];
+
+        let response_body = format!("00001:1\n{}:42\nFFFFF:0\n", suffix);
+
+        Mock::given(matchers::method("GET"))
+            .and(matchers::path(format!("/range/{}", prefix)))
+            .and(matchers::header("Add-Padding", "true"))
+            .respond_with(ResponseTemplate::new(200).set_body_string(response_body))
+            .mount(&mock_server)
+            .await;
+
+        let client = reqwest::Client::new();
+        let result = check_password_with_base_url(&client, "password", &mock_server.uri()).await;
+
+        assert_eq!(result, PwnedCheckResult::Pwned { count: 42 });
+    }
+
+    #[tokio::test]
+    async fn check_password_returns_clean_for_unknown_password() {
+        let mock_server = MockServer::start().await;
+        let hash = format!(
+            "{:X}",
+            Sha1::digest(b"this-is-a-unique-runechat-test-password-42")
+        );
+        let prefix = &hash[..5];
+
+        // Response does not contain our suffix
+        let response_body = "00001:1\nABCDE:99\nFFFFF:0\n";
+
+        Mock::given(matchers::method("GET"))
+            .and(matchers::path(format!("/range/{}", prefix)))
+            .and(matchers::header("Add-Padding", "true"))
+            .respond_with(ResponseTemplate::new(200).set_body_string(response_body))
+            .mount(&mock_server)
+            .await;
+
+        let client = reqwest::Client::new();
+        let result = check_password_with_base_url(
+            &client,
+            "this-is-a-unique-runechat-test-password-42",
+            &mock_server.uri(),
+        )
+        .await;
+
+        assert_eq!(result, PwnedCheckResult::Clean);
+    }
+
+    #[tokio::test]
+    async fn check_password_returns_service_unavailable_on_500() {
+        let mock_server = MockServer::start().await;
+        let hash = format!("{:X}", Sha1::digest(b"password"));
+        let prefix = &hash[..5];
+
+        Mock::given(matchers::method("GET"))
+            .and(matchers::path(format!("/range/{}", prefix)))
+            .respond_with(ResponseTemplate::new(500))
+            .mount(&mock_server)
+            .await;
+
+        let client = reqwest::Client::new();
+        let result = check_password_with_base_url(&client, "password", &mock_server.uri()).await;
+
+        assert_eq!(result, PwnedCheckResult::ServiceUnavailable);
+    }
+
+    #[tokio::test]
+    async fn check_password_returns_service_unavailable_on_timeout() {
+        let mock_server = MockServer::start().await;
+        let hash = format!("{:X}", Sha1::digest(b"password"));
+        let prefix = &hash[..5];
+
+        // Respond after 10 seconds — longer than our 5-second timeout
+        Mock::given(matchers::method("GET"))
+            .and(matchers::path(format!("/range/{}", prefix)))
+            .respond_with(ResponseTemplate::new(200).set_delay(std::time::Duration::from_secs(10)))
+            .mount(&mock_server)
+            .await;
+
+        let client = reqwest::Client::new();
+        let result = check_password_with_base_url(&client, "password", &mock_server.uri()).await;
+
+        assert_eq!(result, PwnedCheckResult::ServiceUnavailable);
+    }
 
     #[test]
     fn parse_pwned_response_finds_match() {
         let suffix = "ABCDE";
-        let body = format!(
-            "00001:1\n{}:42\nFFFFF:0\n",
-            suffix
-        );
+        let body = format!("00001:1\n{}:42\nFFFFF:0\n", suffix);
 
-        let found = body.lines().any(|line| {
-            if let Some((line_suffix, count_str)) = line.split_once(':') {
-                line_suffix.eq_ignore_ascii_case(suffix)
-                    && count_str.trim().parse::<u64>().unwrap_or(0) > 0
-            } else {
-                false
-            }
-        });
-
-        assert!(found);
+        let result = parse_pwned_response(&body, suffix);
+        assert_eq!(result, PwnedCheckResult::Pwned { count: 42 });
     }
 
     #[test]
@@ -71,15 +166,24 @@ mod tests {
         let suffix = "ZZZZZ";
         let body = "00001:1\nABCDE:42\nFFFFF:0\n";
 
-        let found = body.lines().any(|line| {
-            if let Some((line_suffix, _)) = line.split_once(':') {
-                line_suffix.eq_ignore_ascii_case(suffix)
-            } else {
-                false
-            }
-        });
+        let result = parse_pwned_response(&body, suffix);
+        assert_eq!(result, PwnedCheckResult::Clean);
+    }
 
-        assert!(!found);
+    #[test]
+    fn parse_pwned_response_case_insensitive_match() {
+        let body = "00001:1\nabcde:7\nFFFFF:0\n";
+
+        let result = parse_pwned_response(&body, "ABCDE");
+        assert_eq!(result, PwnedCheckResult::Pwned { count: 7 });
+    }
+
+    #[test]
+    fn parse_pwned_response_malformed_count_defaults_to_1() {
+        let body = "00001:1\nABCDE:bad\nFFFFF:0\n";
+
+        let result = parse_pwned_response(&body, "ABCDE");
+        assert_eq!(result, PwnedCheckResult::Pwned { count: 1 });
     }
 
     #[test]
@@ -87,7 +191,9 @@ mod tests {
         let hash = format!("{:X}", Sha1::digest(b"password"));
         assert_eq!(hash.len(), 40);
         assert!(hash.chars().all(|c| c.is_ascii_hexdigit()));
-        assert!(hash.chars().all(|c| c.is_ascii_uppercase() || c.is_numeric()));
+        assert!(hash
+            .chars()
+            .all(|c| c.is_ascii_uppercase() || c.is_numeric()));
     }
 
     #[test]

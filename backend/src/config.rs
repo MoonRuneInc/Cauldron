@@ -36,7 +36,9 @@ impl Config {
         };
         let get_u64 = |key: &str, default: u64| -> Result<u64, ConfigError> {
             match std::env::var(key) {
-                Ok(v) => v.parse().map_err(|e| ConfigError::Invalid(key.to_string(), e)),
+                Ok(v) => v
+                    .parse()
+                    .map_err(|e| ConfigError::Invalid(key.to_string(), e)),
                 Err(_) => Ok(default),
             }
         };

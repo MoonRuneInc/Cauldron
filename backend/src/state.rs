@@ -1,11 +1,11 @@
-use std::sync::Arc;
-use dashmap::DashMap;
-use sqlx::PgPool;
-use redis::aio::ConnectionManager;
-use tokio::sync::mpsc;
-use uuid::Uuid;
 use crate::config::Config;
 use crate::rate_limit::RateLimiters;
+use dashmap::DashMap;
+use redis::aio::ConnectionManager;
+use sqlx::PgPool;
+use std::sync::Arc;
+use tokio::sync::mpsc;
+use uuid::Uuid;
 
 #[derive(Clone)]
 pub struct AppState {

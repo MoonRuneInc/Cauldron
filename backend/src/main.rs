@@ -1,16 +1,16 @@
-use runechat_backend::{api, config::Config, rate_limit::RateLimiters, state::AppState};
-use reqwest;
-use sqlx::postgres::PgPoolOptions;
+use axum::extract::DefaultBodyLimit;
+use axum::http::{header, HeaderName, HeaderValue};
+use dashmap::DashMap;
 use redis::aio::ConnectionManager;
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+use reqwest;
+use runechat_backend::{api, config::Config, rate_limit::RateLimiters, state::AppState};
+use sqlx::postgres::PgPoolOptions;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
-use dashmap::DashMap;
 use tower_http::cors::CorsLayer;
 use tower_http::set_header::SetResponseHeaderLayer;
-use axum::http::{header, HeaderName, HeaderValue};
-use axum::extract::DefaultBodyLimit;
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -81,11 +81,7 @@ async fn main() -> anyhow::Result<()> {
             axum::http::Method::PATCH,
             axum::http::Method::DELETE,
         ])
-        .allow_headers([
-            header::AUTHORIZATION,
-            header::CONTENT_TYPE,
-            header::ACCEPT,
-        ])
+        .allow_headers([header::AUTHORIZATION, header::CONTENT_TYPE, header::ACCEPT])
         .allow_credentials(true);
 
     let app = api::router()

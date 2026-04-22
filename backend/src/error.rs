@@ -36,9 +36,10 @@ impl IntoResponse for AppError {
             AppError::Conflict(msg) => (StatusCode::CONFLICT, msg.clone()),
             AppError::TooManyRequests => (StatusCode::TOO_MANY_REQUESTS, self.to_string()),
             AppError::ServiceUnavailable => (StatusCode::SERVICE_UNAVAILABLE, self.to_string()),
-            AppError::Database(_) | AppError::Internal(_) => {
-                (StatusCode::INTERNAL_SERVER_ERROR, "internal server error".to_string())
-            }
+            AppError::Database(_) | AppError::Internal(_) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "internal server error".to_string(),
+            ),
         };
         (status, Json(serde_json::json!({ "error": message }))).into_response()
     }

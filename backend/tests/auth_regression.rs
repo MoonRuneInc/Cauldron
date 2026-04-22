@@ -13,9 +13,11 @@ async fn stale_access_token_rejected_after_compromise(pool: PgPool) {
     // 1. Register a user
     let user_id: (uuid::Uuid,) = sqlx::query_as(
         "INSERT INTO users (username, email, password_hash)
-         VALUES ('alice', 'alice@example.com', 'hash') RETURNING id"
+         VALUES ('alice', 'alice@example.com', 'hash') RETURNING id",
     )
-    .fetch_one(&pool).await.unwrap();
+    .fetch_one(&pool)
+    .await
+    .unwrap();
 
     // 2. Issue an access JWT (simulating login)
     let config = runechat_backend::Config {
@@ -29,9 +31,8 @@ async fn stale_access_token_rejected_after_compromise(pool: PgPool) {
         domain: "localhost".to_string(),
         smtp: None,
     };
-    let access_token = runechat_backend::auth::tokens::encode_jwt(
-        user_id.0, "alice", "active", &config
-    ).unwrap();
+    let access_token =
+        runechat_backend::auth::tokens::encode_jwt(user_id.0, "alice", "active", &config).unwrap();
 
     // 3. Simulate replay detection marking the account compromised
     sqlx::query(
@@ -42,7 +43,9 @@ async fn stale_access_token_rejected_after_compromise(pool: PgPool) {
 
     // 4. Build app state with real DB
     let redis_client = redis::Client::open("redis://127.0.0.1:6379").unwrap();
-    let redis = redis::aio::ConnectionManager::new(redis_client).await.unwrap();
+    let redis = redis::aio::ConnectionManager::new(redis_client)
+        .await
+        .unwrap();
     let state = runechat_backend::AppState {
         db: pool.clone(),
         redis,
@@ -67,9 +70,11 @@ async fn stale_access_token_rejected_after_compromise(pool: PgPool) {
     parts.headers = headers;
 
     // 6. Attempt to extract AuthUser — must fail because DB says compromised
-    let result = runechat_backend::auth::middleware::AuthUser::from_request_parts(
-        &mut parts, &state,
-    ).await;
+    let result =
+        runechat_backend::auth::middleware::AuthUser::from_request_parts(&mut parts, &state).await;
 
-    assert!(result.is_err(), "stale access token for compromised account must be rejected");
+    assert!(
+        result.is_err(),
+        "stale access token for compromised account must be rejected"
+    );
 }
