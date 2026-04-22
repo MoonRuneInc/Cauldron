@@ -44,16 +44,18 @@ body:
     validations:
       required: true
   - type: dropdown
-    id: client
+    id: platform
     attributes:
-      label: Client
+      label: Platform
+      description: Select every platform where this issue reproduces.
+      multiple: true
       options:
-        - Web
-        - Windows
-        - Android
-        - Backend/API
-        - Deployment
-        - Not sure
+        - ANDROID
+        - PC
+        - WEB
+        - IOS
+        - MAC
+        - LINUX
     validations:
       required: true
   - type: input

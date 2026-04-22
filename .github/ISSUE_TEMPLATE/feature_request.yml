@@ -23,6 +23,21 @@ body:
     validations:
       required: true
   - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      description: Select every platform this request applies to.
+      multiple: true
+      options:
+        - ANDROID
+        - PC
+        - WEB
+        - IOS
+        - MAC
+        - LINUX
+    validations:
+      required: true
+  - type: dropdown
     id: area
     attributes:
       label: Area
