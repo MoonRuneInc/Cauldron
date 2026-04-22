@@ -1,5 +1,38 @@
 # Changelog
 
+## v0.1.3 - 2026-04-22
+
+Android signature verification recovery.
+
+### Fixed
+
+- Resolve `apksigner` from the installed Android build-tools directory instead of relying on runner `PATH`.
+
+## v0.1.2 - 2026-04-22
+
+Android release workflow recovery.
+
+### Fixed
+
+- Make generated Android Gradle signing imports idempotent.
+- Write Android keystore properties without heredoc indentation risk.
+- Resolve the Android upload keystore from the generated Gradle root project.
+
+## v0.1.1 - 2026-04-22
+
+Android signing recovery release.
+
+### Fixed
+
+- Removed the unsigned Android APK failure path from the release workflow.
+- Require Android signing secrets before publishing Android release artifacts.
+- Verify Android APK signatures before upload.
+- Exclude `*-unsigned.apk` files from release artifacts.
+
+### Notes
+
+- `v0.1.0` remains Windows-only after the invalid unsigned Android APK was removed from the GitHub release.
+
 ## v0.1.0 - 2026-04-22
 
 First watched RuneChat release candidate.
