@@ -65,7 +65,14 @@ async fn create_server_seeds_general_and_announcements(pool: PgPool) {
     .await
     .expect("list channels");
 
-    assert_eq!(channels.len(), 2, "new server must have exactly 2 default channels");
+    assert_eq!(
+        channels.len(),
+        2,
+        "new server must have exactly 2 default channels"
+    );
     assert_eq!(channels[0], ("General".to_string(), "general".to_string()));
-    assert_eq!(channels[1], ("Announcements".to_string(), "announcements".to_string()));
+    assert_eq!(
+        channels[1],
+        ("Announcements".to_string(), "announcements".to_string())
+    );
 }
