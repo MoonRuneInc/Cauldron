@@ -70,6 +70,18 @@ async fn create_server(
         .execute(&mut *tx)
         .await?;
 
+    // Seed default channels
+    for (display_name, slug) in [("General", "general"), ("Announcements", "announcements")] {
+        sqlx::query(
+            "INSERT INTO channels (server_id, display_name, slug) VALUES ($1, $2, $3)",
+        )
+        .bind(server_id)
+        .bind(display_name)
+        .bind(slug)
+        .execute(&mut *tx)
+        .await?;
+    }
+
     tx.commit().await?;
 
     Ok((
